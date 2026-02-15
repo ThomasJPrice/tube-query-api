@@ -41,8 +41,39 @@ module.exports = async (req, res) => {
       throw new Error(`TFL API returned status ${arrivalsResponse.status}`);
     }
 
-    const arrivals = await arrivalsResponse.json();
+    let arrivals = await arrivalsResponse.json();
     const statusData = statusResponse.ok ? await statusResponse.json() : null;
+
+    // If no arrivals found, try to find alternative stop point IDs for this line at this station
+    // This is especially important for Elizabeth line which uses different IDs
+    if (arrivals.length === 0) {
+      const stationInfoResponse = await fetch(
+        `https://api.tfl.gov.uk/StopPoint/${encodeURIComponent(stationId)}`
+      );
+      
+      if (stationInfoResponse.ok) {
+        const stationInfo = await stationInfoResponse.json();
+        
+        // Look for child stop points that serve this line
+        const childStops = stationInfo.children || [];
+        
+        // Try to find a stop point that serves the requested line
+        for (const child of childStops) {
+          if (child.lines?.some(l => l.id === line)) {
+            const childResponse = await fetch(
+              `https://api.tfl.gov.uk/Line/${encodeURIComponent(line)}/Arrivals/${encodeURIComponent(child.id)}`
+            );
+            if (childResponse.ok) {
+              const childArrivals = await childResponse.json();
+              if (childArrivals.length > 0) {
+                arrivals = childArrivals;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
 
     // Extract line status information
     let lineStatus = {
