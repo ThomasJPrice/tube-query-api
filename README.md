@@ -4,7 +4,7 @@ A serverless API built for Vercel that provides real-time London Underground tub
 
 ## Features
 
-- 🚇 Get all London Underground stations
+- 🚇 Get all London Underground tube stations (including Elizabeth line stops)
 - 🚉 Get tube lines for specific stations
 - 🧭 Get real-time arrival predictions and directions
 - 🚄 Get next 4 live trains with arrival times in seconds
@@ -21,7 +21,7 @@ A serverless API built for Vercel that provides real-time London Underground tub
 GET /api/stations
 ```
 
-Returns a list of all London Underground tube stations.
+Returns a list of all London Underground stations. Stations include all lines that serve them (tube lines, Elizabeth line, etc.).
 
 **Response Example:**
 ```json
@@ -56,7 +56,7 @@ Returns a list of all London Underground tube stations.
 GET /api/lines/[stationId]
 ```
 
-Returns the tube lines that serve a specific station.
+Returns all lines (tube, Elizabeth line, Overground, etc.) that serve a specific station.
 
 **Parameters:**
 - `stationId` - The station ID (e.g., "940GZZLUOXC")
@@ -321,6 +321,7 @@ Common line IDs used in the TFL API:
 - `central` - Central
 - `circle` - Circle
 - `district` - District
+- `elizabeth` - Elizabeth line
 - `hammersmith-city` - Hammersmith & City
 - `jubilee` - Jubilee
 - `metropolitan` - Metropolitan

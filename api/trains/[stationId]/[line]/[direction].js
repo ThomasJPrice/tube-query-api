@@ -61,25 +61,56 @@ module.exports = async (req, res) => {
     }
 
     // Helper function to extract direction from platform name
-    const extractDirection = (platformName, fallbackDirection) => {
-      if (!platformName || platformName === 'Unknown') {
-        return fallbackDirection || 'Unknown';
+    const extractDirection = (platformName, fallbackDirection, towards) => {
+      // Try platform name first
+      if (platformName && platformName !== 'Unknown') {
+        // Match "Eastbound - Platform 4" format
+        let match = platformName.match(/^(\w+bound)/i);
+        if (match) {
+          return match[1];
+        }
+        
+        // Match standalone directions like "Eastbound", "Westbound"
+        match = platformName.match(/^(East|West|North|South)(?:bound)?/i);
+        if (match) {
+          return match[0];
+        }
+        
+        // Elizabeth line and some others use "Platform 1 Westbound" or just platform numbers
+        match = platformName.match(/(East|West|North|South)(?:bound)?/i);
+        if (match) {
+          return match[0];
+        }
       }
       
-      // Platform names are typically "Northbound - Platform 4", "Eastbound - Platform 1", etc.
-      const match = platformName.match(/^(\w+bound)/i);
-      if (match) {
-        return match[1];
+      // Try using the 'towards' field to determine direction
+      if (towards) {
+        // Common terminal stations can indicate direction
+        const easternTerminals = ['Shenfield', 'Abbey Wood', 'Epping', 'Hainault', 'Ealing Broadway', 'Barking'];
+        const westernTerminals = ['Reading', 'Heathrow', 'West Ruislip', 'Uxbridge', 'Edgware'];
+        const northernTerminals = ['High Barnet', 'Edgware', 'Mill Hill East', 'Cockfosters'];
+        const southernTerminals = ['Morden', 'Wimbledon', 'Brixton'];
+        
+        if (easternTerminals.some(term => towards.includes(term))) return 'Eastbound';
+        if (westernTerminals.some(term => towards.includes(term))) return 'Westbound';
+        if (northernTerminals.some(term => towards.includes(term))) return 'Northbound';
+        if (southernTerminals.some(term => towards.includes(term))) return 'Southbound';
       }
       
-      return fallbackDirection || platformName.split(' - ')[0] || 'Unknown';
+      // Use fallback direction or towards field
+      if (fallbackDirection && fallbackDirection !== 'Unknown') {
+        return fallbackDirection;
+      }
+      
+      // Last resort: use towards or platform name as-is
+      return towards || platformName?.split(' - ')[0] || 'Unknown';
     };
 
     // Filter arrivals by the requested direction (case-insensitive)
     const directionLower = direction.toLowerCase();
     const filteredArrivals = arrivals.filter(arrival => {
       const platformName = arrival.platformName || 'Unknown';
-      const arrivalDirection = extractDirection(platformName, arrival.direction || arrival.towards);
+      const arrivalDirection = extractDirection(platformName, arrival.direction, arrival.towards);
       return arrivalDirection.toLowerCase() === directionLower;
     });
 

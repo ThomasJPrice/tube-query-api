@@ -22,8 +22,7 @@ module.exports = async (req, res) => {
     // Filter to only get actual tube stations (not individual platforms or entrance points)
     // stopType "NaptanMetroStation" represents actual Underground stations
     const tubeStations = data.stopPoints?.filter(station => 
-      station.stopType === 'NaptanMetroStation' || 
-      station.stopType === 'NaptanRailStation'
+      station.stopType === 'NaptanMetroStation'
     ) || [];
 
     // Extract and format relevant station information

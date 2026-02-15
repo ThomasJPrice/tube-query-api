@@ -1,5 +1,5 @@
 // GET /api/lines/[stationId]
-// Returns a list of tube lines that serve a specific station
+// Returns all lines that serve a specific station
 
 const fetch = require('node-fetch');
 
@@ -37,15 +37,12 @@ module.exports = async (req, res) => {
 
     const data = await response.json();
 
-    // Extract line information
+    // Extract line information - include all lines (tube, Elizabeth line, etc.)
     const lines = data.lines?.map(line => ({
       id: line.id,
       name: line.name,
       modeName: line.modeName
     })) || [];
-
-    // Filter for tube lines only
-    const tubeLines = lines
 
     // Set cache headers (cache for 1 hour)
     res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
@@ -54,8 +51,8 @@ module.exports = async (req, res) => {
       success: true,
       stationId,
       stationName: data.commonName || data.name,
-      count: tubeLines.length,
-      lines: tubeLines
+      count: lines.length,
+      lines: lines
     });
 
   } catch (error) {
