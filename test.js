@@ -55,6 +55,10 @@ async function testAPI() {
             const trainsRes = await fetch(`${BASE_URL}/api/trains/${testStation.id}/${testLine.id}/${testDirection}`);
             const trainsData = await trainsRes.json();
             console.log(`✅ Status: ${trainsRes.status}`);
+            console.log(`✅ Line Status: ${trainsData.lineStatus.statusSeverityDescription} (${trainsData.lineStatus.statusSeverity})`);
+            if (trainsData.lineStatus.reason) {
+              console.log(`   ℹ️  ${trainsData.lineStatus.reason}`);
+            }
             console.log(`✅ Found ${trainsData.count} upcoming trains for ${trainsData.direction}`);
             
             if (trainsData.trains && trainsData.trains.length > 0) {

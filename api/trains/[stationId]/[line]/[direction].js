@@ -22,12 +22,13 @@ module.exports = async (req, res) => {
       });
     }
 
-    // Fetch arrivals for the station and line from TFL API
-    const response = await fetch(
-      `https://api.tfl.gov.uk/Line/${encodeURIComponent(line)}/Arrivals/${encodeURIComponent(stationId)}`
-    );
+    // Fetch arrivals and line status from TFL API in parallel
+    const [arrivalsResponse, statusResponse] = await Promise.all([
+      fetch(`https://api.tfl.gov.uk/Line/${encodeURIComponent(line)}/Arrivals/${encodeURIComponent(stationId)}`),
+      fetch(`https://api.tfl.gov.uk/Line/${encodeURIComponent(line)}/Status`)
+    ]);
     
-    if (response.status === 404) {
+    if (arrivalsResponse.status === 404) {
       return res.status(404).json({
         success: false,
         error: 'Station or line not found',
@@ -36,11 +37,28 @@ module.exports = async (req, res) => {
       });
     }
 
-    if (!response.ok) {
-      throw new Error(`TFL API returned status ${response.status}`);
+    if (!arrivalsResponse.ok) {
+      throw new Error(`TFL API returned status ${arrivalsResponse.status}`);
     }
 
-    const arrivals = await response.json();
+    const arrivals = await arrivalsResponse.json();
+    const statusData = statusResponse.ok ? await statusResponse.json() : null;
+
+    // Extract line status information
+    let lineStatus = {
+      statusSeverity: 10,
+      statusSeverityDescription: 'Good Service',
+      reason: null
+    };
+
+    if (statusData && statusData.length > 0 && statusData[0].lineStatuses && statusData[0].lineStatuses.length > 0) {
+      const status = statusData[0].lineStatuses[0];
+      lineStatus = {
+        statusSeverity: status.statusSeverity || 10,
+        statusSeverityDescription: status.statusSeverityDescription || 'Good Service',
+        reason: status.reason || null
+      };
+    }
 
     // Helper function to extract direction from platform name
     const extractDirection = (platformName, fallbackDirection) => {
@@ -102,6 +120,7 @@ module.exports = async (req, res) => {
       stationId,
       line,
       direction,
+      lineStatus,
       count: upcomingTrains.length,
       trains: upcomingTrains
     });

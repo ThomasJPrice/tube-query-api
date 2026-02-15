@@ -8,6 +8,7 @@ A serverless API built for Vercel that provides real-time London Underground tub
 - 🚉 Get tube lines for specific stations
 - 🧭 Get real-time arrival predictions and directions
 - 🚄 Get next 4 live trains with arrival times in seconds
+- 🚦 Real-time line status (Good Service, Minor Delays, etc.)
 - ⚡ Serverless and scalable on Vercel
 - 🔒 Safe data handling with error management
 - 📦 No API key required for TFL API
@@ -159,7 +160,7 @@ Returns the next 4 upcoming trains for a specific station, line, and direction w
 
 **Important:** Use the exact direction format returned by the `/api/directions` endpoint (with capital first letter).
 
-**🔴 No Caching:** This endpoint always fetches fresh data from the TFL API with no caching. Every request retrieves real-time train positions and arrival times.
+**🔴 No Caching:** This endpoint always fetches fresh data from the TFL API with no caching. Every request retrieves real-time train positions, arrival times, and current line status.
 
 **Example Request:**
 ```
@@ -173,6 +174,11 @@ GET /api/trains/940GZZLUOXC/central/Eastbound
   "stationId": "940GZZLUOXC",
   "line": "central",
   "direction": "Eastbound",
+  "lineStatus": {
+    "statusSeverity": 10,
+    "statusSeverityDescription": "Good Service",
+    "reason": null
+  },
   "count": 4,
   "trains": [
     {
@@ -216,6 +222,13 @@ GET /api/trains/940GZZLUOXC/central/Eastbound
 ```
 
 **Response Fields:**
+
+**Line Status:**
+- `lineStatus.statusSeverity` - Numeric severity code (see table below)
+- `lineStatus.statusSeverityDescription` - Human-readable status description
+- `lineStatus.reason` - Detailed explanation of any disruptions (null if good service)
+
+**Train Information:**
 - `position` - Train position in arrival order (1-4)
 - `destinationName` - Final destination of the train
 - `timeToStation` - **Time until arrival in seconds**
@@ -223,6 +236,45 @@ GET /api/trains/940GZZLUOXC/central/Eastbound
 - `platformName` - Platform where the train will arrive
 - `currentLocation` - Current location of the train
 - `towards` - Direction/destination the train is heading
+
+**Line Status Severity Levels:**
+
+| Severity | Description | Meaning |
+|----------|-------------|---------|
+| 10 | Good Service | Normal service operating |
+| 9 | Minor Delays | Service running with minor delays |
+| 8 | Severe Delays | Service running with severe delays |
+| 7 | Reduced Service | Service operating at reduced frequency |
+| 6 | Bus Service | Rail service replaced by buses |
+| 5 | Part Closure | Service not operating on part of the line |
+| 4 | Planned Closure | Planned engineering work affecting service |
+| 3 | Part Suspended | Part of line temporarily not in service |
+| 2 | Suspended | Entire line temporarily not in service |
+| 1 | Closed | Line completely closed |
+| 0 | Special Service | Special service pattern (e.g., events) |
+
+**Common Status Examples:**
+- **Good Service (10)**: `"reason": null` - Everything running normally
+- **Minor Delays (9)**: `"reason": "Minor delays due to train cancellations"`
+- **Part Closure (5)**: `"reason": "No service between White City and Ealing Broadway. Replacement buses operate."`
+- **Planned Closure (4)**: `"reason": "Service operates 06:00-00:30, Monday to Friday only"`
+
+**Example Response with Disruption:**
+```json
+{
+  "success": true,
+  "stationId": "940GZZLUOXC",
+  "line": "central",
+  "direction": "Eastbound",
+  "lineStatus": {
+    "statusSeverity": 9,
+    "statusSeverityDescription": "Minor Delays",
+    "reason": "Central Line: Minor delays due to train cancellations."
+  },
+  "count": 3,
+  "trains": [...]
+}
+```
 
 **Usage Guide:**
 
