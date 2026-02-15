@@ -41,10 +41,29 @@ async function testAPI() {
           const directionsData = await directionsRes.json();
           console.log(`✅ Status: ${directionsRes.status}`);
           console.log(`✅ Found ${directionsData.count} directions`);
+          
+          let testDirection = null;
           if (directionsData.directions && directionsData.directions.length > 0) {
             directionsData.directions.forEach(dir => {
               console.log(`   - ${dir.direction}: ${dir.nextTrains.length} trains`);
             });
+            testDirection = directionsData.directions[0].direction;
+            console.log();
+            
+            // Test 4: Get live trains for a specific direction
+            console.log(`4️⃣ Testing /api/trains/${testStation.id}/${testLine.id}/${testDirection}...`);
+            const trainsRes = await fetch(`${BASE_URL}/api/trains/${testStation.id}/${testLine.id}/${testDirection}`);
+            const trainsData = await trainsRes.json();
+            console.log(`✅ Status: ${trainsRes.status}`);
+            console.log(`✅ Found ${trainsData.count} upcoming trains for ${trainsData.direction}`);
+            
+            if (trainsData.trains && trainsData.trains.length > 0) {
+              trainsData.trains.forEach(train => {
+                const minutes = Math.floor(train.timeToStation / 60);
+                const seconds = train.timeToStation % 60;
+                console.log(`   ${train.position}. ${train.destinationName} - ${minutes}m ${seconds}s (${train.timeToStation}s)`);
+              });
+            }
           }
         }
       }

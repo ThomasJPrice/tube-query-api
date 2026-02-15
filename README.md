@@ -7,6 +7,7 @@ A serverless API built for Vercel that provides real-time London Underground tub
 - 🚇 Get all London Underground stations
 - 🚉 Get tube lines for specific stations
 - 🧭 Get real-time arrival predictions and directions
+- 🚄 Get next 4 live trains with arrival times in seconds
 - ⚡ Serverless and scalable on Vercel
 - 🔒 Safe data handling with error management
 - 📦 No API key required for TFL API
@@ -143,6 +144,111 @@ GET /api/directions/940GZZLUOXC/central
 }
 ```
 
+### 4. Get Live Trains for a Specific Direction
+
+```
+GET /api/trains/[stationId]/[line]/[direction]
+```
+
+Returns the next 4 upcoming trains for a specific station, line, and direction with real-time arrival information.
+
+**Parameters:**
+- `stationId` - The station ID (e.g., "940GZZLUOXC")
+- `line` - The line ID (e.g., "central")
+- `direction` - The direction (e.g., "Eastbound", "Westbound", "Northbound", "Southbound")
+
+**Important:** Use the exact direction format returned by the `/api/directions` endpoint (with capital first letter).
+
+**🔴 No Caching:** This endpoint always fetches fresh data from the TFL API with no caching. Every request retrieves real-time train positions and arrival times.
+
+**Example Request:**
+```
+GET /api/trains/940GZZLUOXC/central/Eastbound
+```
+
+**Response Example:**
+```json
+{
+  "success": true,
+  "stationId": "940GZZLUOXC",
+  "line": "central",
+  "direction": "Eastbound",
+  "count": 4,
+  "trains": [
+    {
+      "position": 1,
+      "destinationName": "Epping",
+      "timeToStation": 90,
+      "expectedArrival": "2026-02-15T10:30:00Z",
+      "platformName": "Eastbound - Platform 4",
+      "currentLocation": "At Liverpool Street",
+      "towards": "Epping"
+    },
+    {
+      "position": 2,
+      "destinationName": "Hainault",
+      "timeToStation": 180,
+      "expectedArrival": "2026-02-15T10:31:30Z",
+      "platformName": "Eastbound - Platform 4",
+      "currentLocation": "Between Bank and Liverpool Street",
+      "towards": "Hainault"
+    },
+    {
+      "position": 3,
+      "destinationName": "Epping",
+      "timeToStation": 270,
+      "expectedArrival": "2026-02-15T10:33:00Z",
+      "platformName": "Eastbound - Platform 4",
+      "currentLocation": "At Bank",
+      "towards": "Epping"
+    },
+    {
+      "position": 4,
+      "destinationName": "Epping",
+      "timeToStation": 360,
+      "expectedArrival": "2026-02-15T10:34:30Z",
+      "platformName": "Eastbound - Platform 4",
+      "currentLocation": "Approaching Bank",
+      "towards": "Epping"
+    }
+  ]
+}
+```
+
+**Response Fields:**
+- `position` - Train position in arrival order (1-4)
+- `destinationName` - Final destination of the train
+- `timeToStation` - **Time until arrival in seconds**
+- `expectedArrival` - ISO 8601 timestamp of expected arrival
+- `platformName` - Platform where the train will arrive
+- `currentLocation` - Current location of the train
+- `towards` - Direction/destination the train is heading
+
+**Usage Guide:**
+
+1. **First**, call `/api/directions/[stationId]/[line]` to get available directions
+2. **Then**, use one of the returned directions (e.g., "Eastbound") to call `/api/trains/[stationId]/[line]/Eastbound`
+3. **Display** the next 4 trains with their arrival times in seconds
+
+**Example workflow:**
+```bash
+# Step 1: Get directions for Oxford Circus on Central line
+GET /api/directions/940GZZLUOXC/central
+# Returns: { directions: [{ direction: "Eastbound", ... }, { direction: "Westbound", ... }] }
+
+# Step 2: Get live trains for Eastbound direction
+GET /api/trains/940GZZLUOXC/central/Eastbound
+# Returns: Next 4 eastbound trains with arrival times in seconds
+```
+
+**Converting seconds to display format:**
+```javascript
+// Example: timeToStation = 90 seconds
+const minutes = Math.floor(90 / 60); // 1 minute
+const seconds = 90 % 60; // 30 seconds
+// Display: "1m 30s" or "90s"
+```
+
 ## Getting Station IDs
 
 To find a station ID:
@@ -229,9 +335,10 @@ This API implements several safety measures:
 - ✅ **Error Handling**: Comprehensive try-catch blocks with meaningful error messages
 - ✅ **HTTP Method Restriction**: Only GET requests are allowed
 - ✅ **Caching**: Appropriate cache headers to reduce API load
-  - Stations: 1 hour cache
-  - Lines: 1 hour cache
-  - Directions: 30 seconds cache (real-time data)
+  - Stations: 1 hour cache (static data)
+  - Lines: 1 hour cache (static data)
+  - Directions: 30 seconds cache (semi-live data)
+  - Live Trains: **No caching** - always fetches fresh data from TFL API
 - ✅ **Response Validation**: Checks for valid responses from TFL API
 - ✅ **No API Key Required**: Uses public TFL API endpoints
 
@@ -247,13 +354,19 @@ This project uses the official Transport for London Unified API:
 ```
 tube-tracker-api/
 ├── api/
-│   ├── stations.js                    # GET /api/stations
+│   ├── stations.js                               # GET /api/stations
 │   ├── lines/
-│   │   └── [stationId].js            # GET /api/lines/[stationId]
-│   └── directions/
+│   │   └── [stationId].js                       # GET /api/lines/[stationId]
+│   ├── directions/
+│   │   └── [stationId]/
+│   │       └── [line].js                        # GET /api/directions/[stationId]/[line]
+│   └── trains/
 │       └── [stationId]/
-│           └── [line].js             # GET /api/directions/[stationId]/[line]
+│           └── [line]/
+│               └── [direction].js               # GET /api/trains/[stationId]/[line]/[direction]
 ├── package.json
+├── vercel.json
+├── test.js
 └── README.md
 ```
 
